@@ -12,7 +12,6 @@ class GateDecision(Enum):
     BUSINESS = "BUSINESS"   # User is making a business request
     SOCIAL = "SOCIAL"       # User is engaging in phatic/greeting interaction
     OFF_TOPIC = "OFF_TOPIC" # User is asking something outside the operator's role
-    BLOCKED = "BLOCKED"     # User is asking something illegal/harmful
 
 @dataclass
 class GateConfig:
@@ -21,13 +20,7 @@ class GateConfig:
     Separates LANGUAGE from LOGIC.
     To add a new language, modify the config, NOT the Gate.
     """
-    # BLOCKED keywords - Safety First (HIGHEST PRIORITY)
-    blocked_particles: Set[str] = field(default_factory=lambda: {
-        "bomba", "silah", "uyuşturucu", "öldür", "saldır",
-        "intihar", "patla", "hack", "illegal", "yasadışı"
-    })
-
-    # BUSINESS keywords - Music Store domain (SECONDARY PRIORITY)
+    # BUSINESS keywords - Music Store domain (HIGHEST PRIORITY)
     business_particles: Set[str] = field(default_factory=lambda: {
         "fiyat", "ücret", "kaç para", "stok", "var mı", "ne kadar",
         "çal", "oynat", "dinle", "albüm", "şarkı", "sanatçı", 
@@ -71,24 +64,19 @@ class ConversationGate:
         Classifies user input using PRIORITY-BASED keyword matching.
         
         Priority Order:
-        1. BLOCKED (Highest) - Safety first
-        2. BUSINESS (High) - Any business keyword found
-        3. FRAMING -> BUSINESS - User preparing to ask
-        4. SOCIAL (Identity/Greeting) - Explicit social Interaction
-        5. AGENT FOCUS -> OFF_TOPIC - Irrelevant personal questions
-        6. Default -> BUSINESS (Unknown = actionable)
+        1. BUSINESS (Highest) - Any business keyword found
+        2. FRAMING -> BUSINESS - User preparing to ask
+        3. SOCIAL (Identity/Greeting) - Explicit social Interaction
+        4. AGENT FOCUS -> OFF_TOPIC - Irrelevant personal questions
+        5. Default -> BUSINESS (Unknown = actionable)
         """
         normalized = text.strip().lower()
-
-        # === PRIORITY 1: BLOCKED Intent (Safety First) ===
-        if self._contains_any_particle(normalized, self.config.blocked_particles):
-            return GateDecision.BLOCKED
         
-        # === PRIORITY 2: BUSINESS Intent (High Priority) ===
+        # === PRIORITY 1: BUSINESS Intent (Highest Priority) ===
         if self._contains_any_particle(normalized, self.config.business_particles):
             return GateDecision.BUSINESS
         
-        # === PRIORITY 3: Task Framing -> BUSINESS ===
+        # === PRIORITY 2: Task Framing -> BUSINESS ===
         if self._contains_any_particle(normalized, self.config.framing_particles):
             return GateDecision.BUSINESS
             

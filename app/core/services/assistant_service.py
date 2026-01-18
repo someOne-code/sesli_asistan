@@ -271,18 +271,7 @@ class AssistantService:
             print(f">>> DEBUG [Tenant]: {tenant_id}")
             print(f">>> DEBUG [Gate]: {gate_decision}")
             
-            if gate_decision == self.GateDecision.BLOCKED:
-                logger.warning(f"[SECURITY] Gate Blocked: {user_text}")
-                VisualTrace.log_step("Security", "BLOCKED", "Yasadışı/Tehlikeli İstek")
-                return {
-                    "user_text": user_text,
-                    "ai_response": "Üzgünüm, güvenlik ve etik kurallarımız gereği bu tür (tehlikeli/yasadışı) isteklere cevap veremiyorum. Lütfen başka bir konuda yardımcı olmama izin verin.",
-                    "intent": "SECURITY_BLOCK",
-                    "sentiment": "NEGATIVE",
-                    "context_used": "Security Guardrail"
-                }
-
-            elif gate_decision == self.GateDecision.SOCIAL:
+            if gate_decision == self.GateDecision.SOCIAL:
                 logger.debug("[CONVERSATION_GATE] Decision: SOCIAL")
                 context_data = "Kullanıcı sohbet ediyor. Samimi cevap ver."
                 intent_label = "BLOCK_GREETING"

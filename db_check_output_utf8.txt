@@ -1,0 +1,189 @@
+﻿Connecting to DB: hedef.db
+
+--- CHECKING CHINOOK METALLICA ---
+python : Traceback (most rec
+ent call last):
+At line:1 char:1
++ python scripts/check_chino
+ok_data.py > db_check_output
+.txt 2>&1
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~
+    + CategoryInfo          
+    : NotSpecified: (Trace  
+  back (most recent call    
+ last)::String) [], Remo    
+teException
+    + FullyQualifiedErrorId 
+    : NativeCommandError
+ 
+  File "C:\Users\umut\AppDat
+a\Local\Programs\Python\Pyth
+on313\Lib\site-packages\sqla
+lchemy\engine\base.py", line
+ 1967, in _exec_single_conte
+xt
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statemen
+t, effective_parameters, con
+text
+        ^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^
+    )
+    ^
+  File "C:\Users\umut\AppDat
+a\Local\Programs\Python\Pyth
+on313\Lib\site-packages\sqla
+lchemy\engine\default.py", l
+ine 952, in do_execute
+    cursor.execute(statement
+, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^
+^^^^^^^^^^^^^
+sqlite3.OperationalError: no
+ such table: products
+
+The above exception was the 
+direct cause of the followin
+g exception:
+
+Traceback (most recent call 
+last):
+  File "C:\Users\umut\OneDri
+ve\Masa³st³\sesli asistan\sc
+ripts\check_chinook_data.py"
+, line 43, in <module>
+    check_data()
+    ~~~~~~~~~~^^
+  File "C:\Users\umut\OneDri
+ve\Masa³st³\sesli asistan\sc
+ripts\check_chinook_data.py"
+, line 25, in check_data
+    count = conn.execute(que
+ry_metallica, {"term": "%Met
+allica%"}).scalar()
+            ~~~~~~~~~~~~^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^
+  File "C:\Users\umut\AppDat
+a\Local\Programs\Python\Pyth
+on313\Lib\site-packages\sqla
+lchemy\engine\base.py", line
+ 1419, in execute
+    return meth(
+        self,
+        distilled_parameters
+,
+        execution_options or
+ NO_OPTIONS,
+    )
+  File "C:\Users\umut\AppDat
+a\Local\Programs\Python\Pyth
+on313\Lib\site-packages\sqla
+lchemy\sql\elements.py", lin
+e 527, in _execute_on_connec
+tion
+    return connection._execu
+te_clauseelement(
+           ~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~^
+        self, distilled_para
+ms, execution_options
+        ^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\umut\AppDat
+a\Local\Programs\Python\Pyth
+on313\Lib\site-packages\sqla
+lchemy\engine\base.py", line
+ 1641, in _execute_clauseele
+ment
+    ret = self._execute_cont
+ext(
+        dialect,
+    ...<8 lines>...
+        cache_hit=cache_hit,
+    )
+  File "C:\Users\umut\AppDat
+a\Local\Programs\Python\Pyth
+on313\Lib\site-packages\sqla
+lchemy\engine\base.py", line
+ 1846, in _execute_context
+    return self._exec_single
+_context(
+           ~~~~~~~~~~~~~~~~~
+~~~~~~~~^
+        dialect, context, st
+atement, parameters
+        ^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\umut\AppDat
+a\Local\Programs\Python\Pyth
+on313\Lib\site-packages\sqla
+lchemy\engine\base.py", line
+ 1986, in _exec_single_conte
+xt
+    self._handle_dbapi_excep
+tion(
+    ~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~^
+        e, str_statement, ef
+fective_parameters, cursor, 
+context
+        ^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^
+    )
+    ^
+  File "C:\Users\umut\AppDat
+a\Local\Programs\Python\Pyth
+on313\Lib\site-packages\sqla
+lchemy\engine\base.py", line
+ 2363, in _handle_dbapi_exce
+ption
+    raise sqlalchemy_excepti
+on.with_traceback(exc_info[2
+]) from e
+  File "C:\Users\umut\AppDat
+a\Local\Programs\Python\Pyth
+on313\Lib\site-packages\sqla
+lchemy\engine\base.py", line
+ 1967, in _exec_single_conte
+xt
+    self.dialect.do_execute(
+    ~~~~~~~~~~~~~~~~~~~~~~~^
+        cursor, str_statemen
+t, effective_parameters, con
+text
+        ^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+^^^^
+    )
+    ^
+  File "C:\Users\umut\AppDat
+a\Local\Programs\Python\Pyth
+on313\Lib\site-packages\sqla
+lchemy\engine\default.py", l
+ine 952, in do_execute
+    cursor.execute(statement
+, parameters)
+    ~~~~~~~~~~~~~~^^^^^^^^^^
+^^^^^^^^^^^^^
+sqlalchemy.exc.OperationalEr
+ror: (sqlite3.OperationalErr
+or) no such table: products
+[SQL: SELECT count(*) FROM p
+roducts WHERE tenant_id = 'c
+hinook_music' AND name LIKE 
+?]
+[parameters: ('%Metallica%',
+)]
+(Background on this error at
+: https://sqlalche.me/e/20/e
+3q8)

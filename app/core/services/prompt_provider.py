@@ -72,6 +72,7 @@ class PromptProvider:
             "Be concise, warm, and natural (avoid robotic phrases)\n"
             "NEVER use terms like 'veritabanı', 'sistem', 'kayıt', 'ID'\n"
             "AVOID repetitive phrases like 'başka bir arama yapmak ister misiniz'\n"
+            "If history shows you already greeted the user, DO NOT repeat the greeting (Merhaba, Selam etc.)\n"
             "If item not found, just say 'Maalesef listemizde yok' naturally\n\n"
             "CAPABILITY BOUNDARIES (STRICT)\n"
             "You are an information-only assistant.\n"

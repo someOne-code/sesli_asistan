@@ -537,6 +537,11 @@ class AssistantService:
                 is_first_message=is_first_message
             )
             
+            # [POST-PROCESS] Enforce Zero Chattiness
+            # If not first message, STRIP starting greetings.
+            if not is_first_message:
+                ai_response = self._strip_repetitive_greeting(ai_response)
+
             return {
                 "user_text": user_text,
                 "ai_response": ai_response,
@@ -544,7 +549,7 @@ class AssistantService:
                 "sentiment": "NEUTRAL",
                 "context_used": context_data
             }
-            
+
         except Exception as ai_error:
             # =========================================================
             # LEVEL 2 ERROR HANDLER: AI Layer Critical Failure
@@ -630,3 +635,25 @@ class AssistantService:
             self.db.log_call(user_text, full_ai_response, "NEUTRAL", None, intent="UNIVERSAL_RAG")
         except Exception:
             pass
+
+    def _strip_repetitive_greeting(self, text: str) -> str:
+        """
+        Removes 'Merhaba', 'Selam' etc. from the start of the response
+        if it's not the first message.
+        """
+        greetings = ["merhaba", "selam", "günaydın", "iyi günler", "iyi akşamlar"]
+
+        # Normalize for checking but keep original casing
+        lower_text = text.lstrip().lower()
+
+        for g in greetings:
+            # Check for "Merhaba," or "Merhaba!" or "Merhaba "
+            if lower_text.startswith(g):
+                # Find length of greeting part including punctuation
+                # Regex: ^(merhaba)([\s!.,]*)
+                match = re.match(f"^({g})([\\s!.,]*)", lower_text)
+                if match:
+                    # Remove it
+                    return text[match.end():].lstrip()
+
+        return text

@@ -101,6 +101,7 @@ COMPANY_SCOPE_SIGNALS = frozenset({
     # Identity
     "vizyon", "vizyonunuz", "misyon", "misyonunuz",
     "kimsiniz", "kimsin", "nesiniz", "hakkında", "hakkınızda",
+    "adı", "ismi", "unvanı", # Name inquiries (e.g. "Adı ne?")
     # Location
     "adres", "adresiniz", "neredesiniz", "nerede", "konum", "lokasyon",
     # Contact

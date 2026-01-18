@@ -1,0 +1,30 @@
+# --- Sistem ve Ortam Dosyaları ---
+.env
+venv/
+venv_broken/
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.DS_Store
+
+# --- Veritabanı ve Medya ---
+*.db
+*.sqlite3
+*.mp3
+*.wav
+
+# --- Loglar ve Çıktılar (Bunlar çok yer kaplar!) ---
+*.log
+logs/
+conversation_logs/
+debug_*.txt
+out.txt
+test_result*.txt
+*error*.txt
+temp_output*
+
+# --- Raporlar (Eğer bunları saklamak istemiyorsan) ---
+# Burayı isteğine göre açıp kapatabilirsin, 
+# ama canlı takip logları genelde yüklenmez.
+CANLI_TAKIP_LOGU.md

@@ -1,0 +1,22 @@
+# Core Framework
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# AI/ML
+groq==0.4.1
+
+# Text-to-Speech
+edge-tts==6.1.9
+
+# Database
+sqlalchemy==2.0.23
+
+# Memory/Caching (Optional - will work without it)
+redis==5.0.1
+
+# Utilities
+python-dotenv==1.0.0
+
+# CORS
+python-cors==1.0.0

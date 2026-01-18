@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Voice AI | Enterprise Demo</title>
+    <style>
+        body { margin: 0; font-family: 'Inter', system-ui, sans-serif; background: #0f1115; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        .container { text-align: center; width: 100%; max-width: 480px; padding: 20px; }
+        h1 { font-weight: 300; letter-spacing: -1px; margin-bottom: 10px; opacity: 0.9; }
+        .tenant-selector { margin-bottom: 40px; }
+        select { background: #1f2229; color: white; border: 1px solid #333; padding: 10px 20px; border-radius: 8px; font-size: 16px; outline: none; cursor: pointer; }
+        
+        /* TERMINAL LOG STYLES */
+        .log-container { 
+            width: 100%; 
+            max-width: 480px; 
+            height: 150px; 
+            background: rgba(0,0,0,0.3); 
+            border-radius: 8px; 
+            border: 1px solid #333; 
+            margin-top: 30px; 
+            padding: 10px; 
+            font-family: 'Consolas', monospace; 
+            font-size: 13px; 
+            overflow-y: auto; 
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .log-entry { opacity: 0.8; animation: fadeIn 0.3s ease; }
+        .log-user { color: #a855f7; }
+        .log-ai { color: #22d3ee; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 0.8; transform: translateY(0); } }
+
+        /* ORB ANIMATION */
+        .orb-container { width: 200px; height: 200px; margin: 0 auto 20px; position: relative; display: flex; align-items: center; justify-content: center; }
+        .orb { width: 140px; height: 140px; background: linear-gradient(135deg, #6366f1, #a855f7); border-radius: 50%; opacity: 0.8; transition: all 0.5s ease; box-shadow: 0 0 60px rgba(139, 92, 246, 0.3); }
+        
+        /* STATES */
+        .state-tag { font-size: 14px; text-transform: uppercase; letter-spacing: 2px; color: #6b7280; font-weight: 600; margin-bottom: 20px; height: 20px; opacity: 0.8;}
+        
+        body[data-state="listening"] .orb { transform: scale(1.1); box-shadow: 0 0 80px rgba(139, 92, 246, 0.6); animation: breathe 2s infinite ease-in-out; }
+        body[data-state="thinking"] .orb { background: linear-gradient(135deg, #f59e0b, #ec4899); animation: spin 2s infinite linear; transform: scale(0.9); }
+        body[data-state="speaking"] .orb { background: linear-gradient(135deg, #10b981, #3b82f6); transform: scale(1.2); animation: pulse 1s infinite; }
+        
+        .mic-btn { background: #fff; color: #000; border: none; padding: 18px 40px; border-radius: 50px; font-size: 18px; font-weight: 600; cursor: pointer; transition: transform 0.2s; box-shadow: 0 10px 25px rgba(0,0,0,0.5); -webkit-tap-highlight-color: transparent; }
+        .mic-btn:active { transform: scale(0.95); }
+        .mic-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        @keyframes breathe { 0%, 100% { transform: scale(1.1); } 50% { transform: scale(1.2); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes pulse { 0%, 100% { transform: scale(1.1); opacity: 0.8; } 50% { transform: scale(1.2); opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Kurumsal Asistan</h1>
+    <div class="tenant-selector">
+        <select id="tenantSelect">
+            <option value="berber_ahmet">✂️ Berber Ahmet</option>
+            <option value="chinook">🎸 Müzik Mağazası</option>
+        </select>
+    </div>
+
+    <div class="state-tag" id="statusText">HAZIR</div>
+    
+    <div class="orb-container">
+        <div class="orb"></div>
+    </div>
+
+    <button id="talkBtn" class="mic-btn">Basılı Tut & Konuş</button>
+    
+    <div class="log-container" id="logBox">
+        <div class="log-entry" style="color: #666;">Sistem hazır. Konuşmaya başlayabilirsiniz...</div>
+    </div>
+</div>
+
+<script>
+    const talkBtn = document.getElementById('talkBtn');
+    const statusText = document.getElementById('statusText');
+    const tenantSelect = document.getElementById('tenantSelect');
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
+
+    // AUDIO CONTEXT for playback
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Mouse events
+    talkBtn.addEventListener('mousedown', startRecording);
+    talkBtn.addEventListener('mouseup', stopRecording);
+    talkBtn.addEventListener('mouseleave', () => { if(isRecording) stopRecording(); });
+    
+    // Touch events for mobile
+    talkBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startRecording(); });
+    talkBtn.addEventListener('touchend', (e) => { e.preventDefault(); stopRecording(); });
+
+    function getSupportedMimeType() {
+        const types = [
+            'audio/webm',
+            'audio/webm;codecs=opus',
+            'audio/mp4',
+            'audio/ogg;codecs=opus'
+        ];
+        for (const type of types) {
+            if (MediaRecorder.isTypeSupported(type)) {
+                console.log("Using MIME:", type);
+                return type;
+            }
+        }
+        return ''; // Let browser decide default
+    }
+
+    let stopRequested = false; // Fix for fast-click race condition
+
+    let globalStream = null; // Persistent Mic Stream
+
+    async function startRecording() {
+        if (document.body.getAttribute('data-state') === 'speaking') return;
+
+        try {
+            // 1. Get Mic Stream (Once)
+            if (!globalStream || !globalStream.active) {
+                console.log("Requesting Mic Permission...");
+                globalStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            }
+
+            const options = {};
+            const mime = getSupportedMimeType();
+            if (mime) options.mimeType = mime;
+            
+            // 2. Reuse Stream
+            mediaRecorder = new MediaRecorder(globalStream, options);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = event => {
+                if (event.data.size > 0) audioChunks.push(event.data);
+            };
+            
+            mediaRecorder.onstop = sendAudio;
+            
+            mediaRecorder.start(200);
+            
+            isRecording = true;
+            setState('listening');
+            talkBtn.textContent = "Dinliyorum...";
+            talkBtn.style.background = "#e4e4e7";
+        } catch (err) {
+            alert("Mikrofon hatası: " + err.message);
+            addLog("HATA: Mikrofon (Stream) Hatası: " + err.message, "ai");
+            console.error(err);
+            globalStream = null; // Reset on error
+        }
+    }
+
+    function stopRecording() {
+        if (isRecording && mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+            isRecording = false;
+            setState('thinking');
+            talkBtn.textContent = "Düşünüyor...";
+            
+            // IMPORTANT: Do NOT stop tracks here.
+            // Keeping the stream open makes the next recording INSTANT.
+            // globalStream.getTracks().forEach(track => track.stop()); 
+        }
+    }
+
+    async function sendAudio() {
+        if (audioChunks.length === 0) {
+            addLog("UYARI: Ses verisi oluşmadı (Çok kısa basıldı).", "ai");
+            setState('ready');
+            talkBtn.textContent = "Basılı Tut & Konuş"; // Force Reset
+            return;
+        }
+
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        console.log("Audio Blob Size:", audioBlob.size);
+        
+        if (audioBlob.size < 100) {
+             addLog("HATA: Ses, boş veya çok kısa (" + audioBlob.size + " bytes).", "ai");
+             setState('ready');
+             return;
+        }
+
+        const tenantId = tenantSelect.value;
+        const formData = new FormData();
+        formData.append("file", audioBlob, "recording.webm");
+
+        try {
+            addLog("SİSTEM: Sunucuya iletiliyor...", "ai");
+
+            const response = await fetch(`/tenants/${tenantId}/voice`, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                 const errTxt = await response.text();
+                 throw new Error(`Server ${response.status}: ${errTxt}`);
+            }
+            
+            // LOG USER TEXT (from Header)
+            const recognizedText = response.headers.get("X-Recognized-Text");
+            if (recognizedText) {
+                try {
+                    addLog("MÜŞTERİ: " + decodeURIComponent(recognizedText), "user");
+                } catch(e) {
+                    addLog("MÜŞTERİ: " + recognizedText, "user");
+                }
+            } else {
+                addLog("MÜŞTERİ: [Ses Algılandı]", "user");
+            }
+
+            // Handle Audio Stream
+            const reader = response.body.getReader();
+            const chunks = [];
+            while(true) {
+                const {done, value} = await reader.read();
+                if (done) break;
+                chunks.push(value);
+            }
+            
+            const responseBlob = new Blob(chunks, { type: 'audio/mpeg' });
+            
+            // LOG AI ACTION
+            const aiText = response.headers.get("X-AI-Response");
+            if (aiText) {
+                 try {
+                    addLog("ASİSTAN: " + decodeURIComponent(aiText), "ai");
+                 } catch(e) {
+                    addLog("ASİSTAN: [Cevap Geldi]", "ai");
+                 }
+            } else {
+                addLog("ASİSTAN: [Sesli Cevap]", "ai");
+            }
+            
+            playResponse(responseBlob);
+
+        } catch (err) {
+            console.error(err);
+            addLog("HATA: " + err.message, "ai");
+            setState('ready');
+            statusText.textContent = "HATA";
+        }
+    }
+
+    let currentAudio = null;
+
+    // Soft Reset on Tenant Change
+    tenantSelect.addEventListener('change', () => {
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio = null;
+        }
+        setState('ready');
+        talkBtn.textContent = "Basılı Tut & Konuş";
+        talkBtn.disabled = false;
+        console.log("Tenant changed -> Session context soft-reset");
+    });
+
+    // ... (Existing code)
+
+    async function playResponse(blob) {
+        setState('speaking');
+        statusText.textContent = "KONUŞUYOR...";
+        talkBtn.textContent = "Asistan Konuşuyor";
+        talkBtn.disabled = true;
+        
+        const audioUrl = URL.createObjectURL(blob);
+        currentAudio = new Audio(audioUrl);
+        
+        currentAudio.onended = () => {
+            setState('ready');
+            talkBtn.textContent = "Basılı Tut & Konuş";
+            talkBtn.disabled = false;
+            currentAudio = null;
+        };
+        
+        try {
+            await currentAudio.play();
+        } catch (e) {
+            console.error("Playback error:", e);
+            setState('ready');
+            talkBtn.disabled = false;
+        }
+    }
+
+    function setState(state) {
+        document.body.setAttribute('data-state', state);
+        if (state === 'ready') statusText.textContent = "HAZIR";
+        if (state === 'listening') statusText.textContent = "DİNLİYOR";
+        if (state === 'thinking') statusText.textContent = "DÜŞÜNÜYOR";
+    }
+
+    function addLog(text, type) {
+        const logBox = document.getElementById('logBox');
+        const entry = document.createElement('div');
+        entry.className = 'log-entry ' + (type === 'user' ? 'log-user' : 'log-ai');
+        entry.textContent = text;
+        logBox.appendChild(entry);
+        logBox.scrollTop = logBox.scrollHeight; // Auto scroll
+    }
+</script>
+
+</body>
+</html>

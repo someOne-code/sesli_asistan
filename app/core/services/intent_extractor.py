@@ -31,6 +31,7 @@ CONTEXT_REF_WORDS = frozenset({
 # Examples: "Ürünleriniz nedir?" (What are your products?), "Katalog" (Catalog)
 CLARIFICATION_WORDS = frozenset({
     "ürün", "ürünler", "ürününüz", "ürünleriniz", "ürününü", "ürünlerini",  # Product variants
+    "albüm", "albümleri", "albümler", "şarkı", "şarkıları", "şarkılar", # Music variants
     "katalog", "kategoriler", "tür", "tarz",       # Catalog variants
     "şey", "şeyler", "var", "yok",                 # Generic things
     "satıyorsunuz", "satış", "satılık", "ne satıyorsunuz", "ne satılıyor" # Selling related
@@ -100,6 +101,7 @@ COMPANY_SCOPE_SIGNALS = frozenset({
     # Identity
     "vizyon", "vizyonunuz", "misyon", "misyonunuz",
     "kimsiniz", "kimsin", "nesiniz", "hakkında", "hakkınızda",
+    "adı", "ismi", "unvanı", # Name inquiries (e.g. "Adı ne?")
     # Location
     "adres", "adresiniz", "neredesiniz", "nerede", "konum", "lokasyon",
     # Contact

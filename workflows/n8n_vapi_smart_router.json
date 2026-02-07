@@ -1,0 +1,345 @@
+{
+  "name": "MELODY - Vapi Smart Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vapi-router",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "Webhook_In",
+      "name": "Vapi Webhook In",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1320,
+        180
+      ],
+      "webhookId": "melody-vapi-router"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $json.body ?? $json;\n\nconst call = body.call || {};\nconst transcript = body.transcript || call.transcript || '';\nconst analysis = body.analysis || call.analysis || {};\n\nconst tenantId = body.tenant_id || body.tenantId || call.metadata?.tenant_id || call.metadata?.tenantId || '';\nconst serviceId = body.service_id || body.serviceId || analysis.service_id || analysis.serviceId || '';\n\nconst normalized = {\n  raw: body,\n  tenant_id: tenantId,\n  call_id: body.call_id || body.callId || call.id || '',\n  customer_phone: body.customer_phone || body.customerPhone || call.customer?.number || call.phoneNumber || '',\n  customer_name: body.customer_name || body.customerName || call.customer?.name || '',\n  requested_start_time: body.start_time || body.requested_start_time || analysis.requested_start_time || null,\n  start_date: body.start_date || analysis.start_date || null,\n  end_date: body.end_date || analysis.end_date || null,\n  service_id: serviceId,\n  transcript,\n  analysis,\n  intent: (body.intent || analysis.intent || '').toString().toUpperCase(),\n};\n\nreturn [{ json: normalized }];"
+      },
+      "id": "Normalize_Input",
+      "name": "Normalize Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1080,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{$json.intent}}",
+              "rightValue": "BOOK_APPOINTMENT",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "If_Book",
+      "name": "Intent = BOOK_APPOINTMENT?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -840,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "leftValue": "={{$json.intent}}",
+              "rightValue": "CHECK_AVAILABILITY",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "If_Availability",
+      "name": "Intent = CHECK_AVAILABILITY?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -600,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL + '/rest/v1/rpc/create_appointment_from_call'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_tenant_id\": $json.tenant_id,\n  \"p_call_id\": $json.call_id,\n  \"p_service_id\": $json.service_id,\n  \"p_start_time\": $json.requested_start_time,\n  \"p_customer_phone\": $json.customer_phone,\n  \"p_customer_name\": $json.customer_name\n}",
+        "options": {}
+      },
+      "id": "Supabase_Create_Appointment",
+      "name": "RPC: create_appointment_from_call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -360,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $json;\n\nreturn [{\n  json: {\n    action: 'BOOK_APPOINTMENT',\n    success: !!r.success,\n    message: r.success\n      ? `Randevu oluşturuldu. ID: ${r.appointment_id}`\n      : `Randevu oluşturulamadı: ${r.error || 'bilinmeyen hata'}`,\n    data: r\n  }\n}];"
+      },
+      "id": "Build_Book_Response",
+      "name": "Build Booking Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -120,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.SUPABASE_URL + '/rest/v1/rpc/check_availability'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{$env.SUPABASE_SERVICE_ROLE_KEY}}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_tenant_id\": $json.tenant_id,\n  \"p_service_id\": $json.service_id,\n  \"p_start_date\": $json.start_date || $now.format('YYYY-MM-DD'),\n  \"p_end_date\": $json.end_date || null\n}",
+        "options": {}
+      },
+      "id": "Supabase_Check_Availability",
+      "name": "RPC: check_availability",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -360,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const r = $json;\n\nconst dayCount = Array.isArray(r.available_slots) ? r.available_slots.length : 0;\n\nreturn [{\n  json: {\n    action: 'CHECK_AVAILABILITY',\n    success: !!r.success,\n    message: r.success\n      ? `Müsaitlik bulundu. ${dayCount} gün için slot var.`\n      : `Müsaitlik kontrolü başarısız: ${r.error || 'bilinmeyen hata'}`,\n    data: r\n  }\n}];"
+      },
+      "id": "Build_Availability_Response",
+      "name": "Build Availability Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -120,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const intent = $json.intent || 'UNKNOWN';\n\nreturn [{\n  json: {\n    action: intent,\n    success: false,\n    message: `Intent yönlendirilemedi: ${intent}. Beklenen: BOOK_APPOINTMENT veya CHECK_AVAILABILITY`,\n    data: $json\n  }\n}];"
+      },
+      "id": "Build_Fallback_Response",
+      "name": "Build Fallback Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -120,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {}
+      },
+      "id": "Respond_JSON",
+      "name": "Respond JSON",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        140,
+        200
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Vapi Webhook In": {
+      "main": [
+        [
+          {
+            "node": "Normalize Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Input": {
+      "main": [
+        [
+          {
+            "node": "Intent = BOOK_APPOINTMENT?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intent = BOOK_APPOINTMENT?": {
+      "main": [
+        [
+          {
+            "node": "RPC: create_appointment_from_call",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Intent = CHECK_AVAILABILITY?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intent = CHECK_AVAILABILITY?": {
+      "main": [
+        [
+          {
+            "node": "RPC: check_availability",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Build Fallback Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RPC: create_appointment_from_call": {
+      "main": [
+        [
+          {
+            "node": "Build Booking Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Booking Response": {
+      "main": [
+        [
+          {
+            "node": "Respond JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RPC: check_availability": {
+      "main": [
+        [
+          {
+            "node": "Build Availability Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Availability Response": {
+      "main": [
+        [
+          {
+            "node": "Respond JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Fallback Response": {
+      "main": [
+        [
+          {
+            "node": "Respond JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  },
+  "id": "MELODY_VAPI_SMART_ROUTER",
+  "tags": []
+}
